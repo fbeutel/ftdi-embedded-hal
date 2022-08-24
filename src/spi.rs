@@ -65,35 +65,37 @@ impl Default for Polarity {
 ///
 /// [`FtHal::spi`]: crate::FtHal::spi
 #[derive(Debug)]
-pub struct Spi<'a, Device: MpsseCmdExecutor> {
+pub struct Spi<Device: MpsseCmdExecutor> {
     /// Parent FTDI device.
-    mtx: &'a Arc<Mutex<FtInner<Device>>>,
+    mtx: Arc<Mutex<FtInner<Device>>>,
     /// SPI polarity
     pol: Polarity,
 }
 
-impl<'a, Device, E> Spi<'a, Device>
+impl<Device, E> Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
     Error<E>: From<E>,
 {
-    pub(crate) fn new(mtx: &Arc<Mutex<FtInner<Device>>>) -> Result<Spi<Device>, Error<E>> {
-        let mut lock = mtx.lock().expect("Failed to aquire FTDI mutex");
-        lock.allocate_pin(0, PinUse::Spi);
-        lock.allocate_pin(1, PinUse::Spi);
-        lock.allocate_pin(2, PinUse::Spi);
+    pub(crate) fn new(mtx: Arc<Mutex<FtInner<Device>>>) -> Result<Spi<Device>, Error<E>> {
+        {
+            let mut lock = mtx.lock().expect("Failed to aquire FTDI mutex");
+            lock.allocate_pin(0, PinUse::Spi);
+            lock.allocate_pin(1, PinUse::Spi);
+            lock.allocate_pin(2, PinUse::Spi);
 
-        // clear direction of first 3 pins
-        lock.direction &= !0x07;
-        // set SCK (AD0) and MOSI (AD1) as output pins
-        lock.direction |= 0x03;
+            // clear direction of first 3 pins
+            lock.direction &= !0x07;
+            // set SCK (AD0) and MOSI (AD1) as output pins
+            lock.direction |= 0x03;
 
-        // set GPIO pins to new state
-        let cmd: MpsseCmdBuilder = MpsseCmdBuilder::new()
-            .set_gpio_lower(lock.value, lock.direction)
-            .send_immediate();
-        lock.ft.send(cmd.as_slice())?;
+            // set GPIO pins to new state
+            let cmd: MpsseCmdBuilder = MpsseCmdBuilder::new()
+                .set_gpio_lower(lock.value, lock.direction)
+                .send_immediate();
+            lock.ft.send(cmd.as_slice())?;
+        }
 
         Ok(Spi {
             mtx,
@@ -127,7 +129,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh0::blocking::spi::Write<u8> for Spi<'a, Device>
+impl<Device, E> eh0::blocking::spi::Write<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -147,7 +149,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh0::blocking::spi::Transfer<u8> for Spi<'a, Device>
+impl<'a, Device, E> eh0::blocking::spi::Transfer<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -168,7 +170,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh0::spi::FullDuplex<u8> for Spi<'a, Device>
+impl<'a, Device, E> eh0::spi::FullDuplex<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -212,7 +214,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh1::spi::ErrorType for Spi<'a, Device>
+impl<'a, Device, E> eh1::spi::ErrorType for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -221,7 +223,7 @@ where
     type Error = Error<E>;
 }
 
-impl<'a, Device, E> eh1::spi::blocking::SpiBusFlush for Spi<'a, Device>
+impl<'a, Device, E> eh1::spi::blocking::SpiBusFlush for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -232,7 +234,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh1::spi::blocking::SpiBusWrite<u8> for Spi<'a, Device>
+impl<'a, Device, E> eh1::spi::blocking::SpiBusWrite<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -250,7 +252,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh1::spi::blocking::SpiBusRead<u8> for Spi<'a, Device>
+impl<'a, Device, E> eh1::spi::blocking::SpiBusRead<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -270,7 +272,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh1::spi::blocking::SpiBus<u8> for Spi<'a, Device>
+impl<'a, Device, E> eh1::spi::blocking::SpiBus<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
@@ -302,7 +304,7 @@ where
     }
 }
 
-impl<'a, Device, E> eh1::spi::nb::FullDuplex<u8> for Spi<'a, Device>
+impl<'a, Device, E> eh1::spi::nb::FullDuplex<u8> for Spi<Device>
 where
     Device: MpsseCmdExecutor<Error = E>,
     E: std::error::Error,
