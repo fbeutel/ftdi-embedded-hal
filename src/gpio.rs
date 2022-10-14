@@ -58,6 +58,12 @@ where
     }
 }
 
+impl<Device: MpsseCmdExecutor> Clone for OutputPin<Device> {
+    fn clone(&self) -> Self {
+        Self { mtx: self.mtx.clone(), idx: self.idx.clone() }
+    }
+}
+
 impl<Device: MpsseCmdExecutor> OutputPin<Device> {
     /// Convert the GPIO pin index to a pin mask
     pub(crate) fn mask(&self) -> u8 {
@@ -159,6 +165,12 @@ impl<Device: MpsseCmdExecutor> InputPin<Device> {
     /// Convert the GPIO pin index to a pin mask
     pub(crate) fn mask(&self) -> u8 {
         1 << self.idx
+    }
+}
+
+impl<Device: MpsseCmdExecutor> Clone for InputPin<Device> {
+    fn clone(&self) -> Self {
+        Self { mtx: self.mtx.clone(), idx: self.idx.clone() }
     }
 }
 
